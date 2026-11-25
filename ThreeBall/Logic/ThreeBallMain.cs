@@ -45,13 +45,30 @@ public class ThreeBallMain(Screen pScreen): ILogic {
 		
 		foreach (var ball in _balls) {
 			ball.Update();
-			_screen.Stamp(ball);
 		}
 		
 		Print();
 	}
 
 	private void Print() {
+		var ballTrails = _balls
+			.Select(ball => ball.GetTrailData().GetEnumerator())
+			.ToList();
+		
+		while(true) {
+			var check = false;
+			foreach (var element in ballTrails) {
+				if(!element.MoveNext()) continue;
+				check = true;
+				_screen.Stamp(element.Current);
+			}
+			if (!check) break;
+		}
+
+		foreach (var ball in _balls) {
+			_screen.Stamp(ball.CircleData);
+		}
+		
 		var result = _screen.Print();
 		Console.SetCursorPosition(0, 0);
 		Console.WriteLine(result);

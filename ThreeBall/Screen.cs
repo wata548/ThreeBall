@@ -17,7 +17,7 @@ public class Screen {
 	public readonly Vector2Int Size;
 	public readonly Vector2Int HalfSize;
 	public readonly Vector2 MinimumCoordSize;
-	private readonly Ball?[] _buffer;
+	private readonly IRgb?[] _buffer;
 	public Vector2 CoordSize {
 		get => field;
 		set {
@@ -41,16 +41,18 @@ public class Screen {
 		MinimumCoordSize = pMinimumCoordSize;
 		CoordSize = pMinimumCoordSize;
 		
-		_buffer = Enumerable.Repeat<Ball?>(null, Size.X * Size.Y).ToArray();
+		_buffer = Enumerable.Repeat<IRgb?>(null, Size.X * Size.Y).ToArray();
 	}
 	
 	public void Init() => Array.Fill(_buffer, null);
+
+	public record CircleData(Vector2 Pos, IRgb Color, float Radius);
 	
-	public void Stamp(Ball pBall) {
-		var temp = ((pBall.Pos - Pos) / GridTerm).Map(MathF.Ceiling);
+	public void Stamp(CircleData pData) {
+		var temp = ((pData.Pos - Pos) / GridTerm).Map(MathF.Ceiling);
 		var screenPos = new Vector2Int((int)temp.X, (int)temp.Y);
 		
-		var circleSize = PixelCnt * pBall.Radius;
+		var circleSize = PixelCnt * pData.Radius;
 		var size = new Vector2Int((int)Math.Ceiling(circleSize.X), (int)Math.Ceiling(circleSize.Y));
 		if (screenPos.X + size.X <= -HalfSize.X) return;
 		if (screenPos.X - size.X >= HalfSize.X) return;
@@ -66,18 +68,19 @@ public class Screen {
 				if(j + screenPos.X <= -HalfSize.X) continue;
 				if (j + screenPos.X >= HalfSize.X) break;
 				
-				if(MathF.Sqrt(i * i * sqTerm.Y + j * j * sqTerm.X) >= pBall.Radius) 
+				if(MathF.Sqrt(i * i * sqTerm.Y + j * j * sqTerm.X) >= pData.Radius) 
 					continue;
 
 				var idx = (screenPos.Y + i + HalfSize.Y) * Size.X + screenPos.X + j + HalfSize.X;
-				_buffer[idx] = pBall;
+				_buffer[idx] = pData.Color;
 			}
 		}
 	}
 
 	public string Print() {
+		var gridColor = "\x1b[38;2;90;90;90m";
 		var builder = new StringBuilder();
-		builder.Append("\x1b[38;2;90;90;90m");
+		builder.Append(gridColor);
 		
 		IRgb v = new Rgb();
 		var black = new Rgb() { R = 0, G = 0, B = 0 };
@@ -111,13 +114,15 @@ public class Screen {
 					if (v != black) {
 						v = black;
 						builder.Append("\x1b[48;2;0;0;0m");
+						builder.Append(gridColor);
 					}
 				}
 				else {
-					var c = _buffer[num]!.Color;
+					var c = _buffer[num];
 					if (v != c) {
 						v = c;
-						builder.Append($"\x1b[48;2;{(int)c.R};{(int)c.G};{(int)c.B}m");
+						var color = $"{(int)c.R};{(int)c.G};{(int)c.B}";
+						builder.Append($"\x1b[48;2;{color}m\x1b[38;2;{color}m");
 					}
 				}
 				builder.Append(context);
@@ -126,6 +131,7 @@ public class Screen {
 			if (v != black) {
 				v = black;
 				builder.Append("\x1b[48;2;0;0;0m");
+				builder.Append(gridColor);
 			}
 			builder.AppendLine("|");
 		}
